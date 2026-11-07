@@ -10,6 +10,7 @@ public class InfestationConfig {
     public static final ForgeConfigSpec.BooleanValue PROTECT_PLATES_AND_BUTTONS;
     public static final ForgeConfigSpec.BooleanValue ARMOR_STAND_PLAYER_LIKE_FIRE;
     public static final ForgeConfigSpec.IntValue ARMOR_STAND_WATER_BURN_SECONDS;
+    public static final ForgeConfigSpec.IntValue ARMOR_STAND_BURN_DEATH_SECONDS;
     public static final ForgeConfigSpec.BooleanValue ARROWS_KEEP_FLYING_IN_BUBBLES;
     public static final ForgeConfigSpec.BooleanValue EXACT_SPLASH_ALL_POTIONS;
 
@@ -37,8 +38,11 @@ public class InfestationConfig {
         ARMOR_STAND_PLAYER_LIKE_FIRE = builder
                 .comment("If true, armor stands (20 health = 10 hearts) take fire, lava, campfire and burning damage exactly like a player: same damage amount, at most one hit every 0.5 seconds. Vanilla armor stands burn far faster.")
                 .define("playerLikeFireDamage", true);
+        ARMOR_STAND_BURN_DEATH_SECONDS = builder
+                .comment("How many seconds a full-health armor stand needs to die while it keeps burning (fire, campfire). Default 120 = exactly 2 minutes. Lava and magma are not affected.")
+                .defineInRange("burnDeathSeconds", 120, 1, 3600);
         ARMOR_STAND_WATER_BURN_SECONDS = builder
-                .comment("An armor stand standing in fire/campfire with water on it keeps being lit and put out. While this happens it takes 1 damage every this many seconds (default 5), so it dies much slower than when burning freely (1 damage per second).")
+                .comment("An armor stand standing in fire/campfire with water on it keeps being lit and put out. While this happens it takes one 'burn second' of damage every this many seconds (default 5), so it dies this many times slower than when burning freely.")
                 .defineInRange("waterBurnIntervalSeconds", 5, 1, 120);
         builder.pop();
 
