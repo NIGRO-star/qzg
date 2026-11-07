@@ -17,9 +17,10 @@ import net.minecraft.world.World;
  *
  * Fire behaviour of an armor stand (20 health = 10 hearts):
  *  - Touching a fire block / campfire (IN_FIRE) deals NO direct damage, it only sets the stand on fire.
- *  - The damage comes from the burning itself (ON_FIRE): 1 health per second, like a player.
+ *  - The damage comes from the burning itself (ON_FIRE): a full-health stand dies after exactly
+ *    120 seconds of burning (config burnDeathSeconds), i.e. maxHealth/240 every 0.5 s.
  *  - Water extinguishes the stand every tick, so a stand that keeps being re-ignited under water only
- *    gets a brief burn: 1 health every few seconds (config), so it dies much slower.
+ *    gets a brief burn: one second's worth of burn damage every few seconds (config), so it dies much slower.
  *  - Lava and magma hurt directly like for a player (at most one hit every 0.5 s).
  * Every time the stand takes damage, an infested stand has its chance to spawn silverfish.
  * Every other kind of damage keeps the vanilla behaviour.
@@ -48,7 +49,7 @@ public class ArmorStandDamage {
                 long interval = waterBurnIntervalTicks();
                 if (!data.contains(LAST_WATER_BURN_KEY) || now - data.getLong(LAST_WATER_BURN_KEY) >= interval) {
                     data.putLong(LAST_WATER_BURN_KEY, now);
-                    damage(stand, 1.0F);
+                    damage(stand, burnDamagePerSecond(stand));
                 }
             } else if (stand.getRemainingFireTicks() <= 0) {
                 stand.setSecondsOnFire(5); // contact only ignites, no direct damage
@@ -61,13 +62,29 @@ public class ArmorStandDamage {
             return true;
         }
         data.putLong(LAST_HIT_KEY, now);
-        damage(stand, amount);
+        if (source == DamageSource.ON_FIRE) {
+            // Burning: a full-health stand dies after exactly burnDeathSeconds (2 hits per second).
+            damage(stand, burnDamagePerSecond(stand) / 2.0F);
+        } else {
+            damage(stand, amount); // lava / magma keep the player-like damage
+        }
         return true;
+    }
+
+    /** Damage that makes a full-health stand die after exactly burnDeathSeconds of burning. */
+    private static float burnDamagePerSecond(ArmorStandEntity stand) {
+        int seconds;
+        try {
+            seconds = InfestationConfig.ARMOR_STAND_BURN_DEATH_SECONDS.get();
+        } catch (IllegalStateException e) {
+            seconds = 120;
+        }
+        return stand.getMaxHealth() / (float) seconds;
     }
 
     private static void damage(ArmorStandEntity stand, float amount) {
         float newHealth = stand.getHealth() - amount;
-        if (newHealth > 0.0F) {
+        if (newHealth > 0.01F) { // small margin so float rounding cannot leave it alive at ~0 health
             stand.setHealth(newHealth);
             InfestationEvents.trySpawnSilverfish(stand); // infested stands spawn silverfish when hurt
         } else {
